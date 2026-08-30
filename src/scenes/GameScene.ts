@@ -60,9 +60,8 @@ export class GameScene extends Phaser.Scene {
     this.bgDisco.setDisplaySize(W, H);
     this.bgDisco.setAlpha(0);
     this.bgDisco.setDepth(1);
-    this.bgDisco.setBlendMode(Phaser.BlendModes.MULTIPLY);
 
-    // Color-cycling overlay for disco multiply effect
+    // Color-cycling overlay for disco effect
     this.discoOverlay = this.add.rectangle(W / 2, H / 2, W, H, 0xff00ff, 0);
     this.discoOverlay.setDepth(2);
     this.discoOverlay.setBlendMode(Phaser.BlendModes.ADD);
@@ -332,15 +331,15 @@ export class GameScene extends Phaser.Scene {
     // 1. Player wobble + red tint
     this.player.hit();
 
-    // 2. Camera shake (stronger) + red flash
-    this.cameras.main.shake(320, 0.035);
-    this.cameras.main.flash(200, 231, 76, 60, true);
+    // 2. Camera shake + brief red flash
+    this.cameras.main.shake(250, 0.028);
+    this.cameras.main.flash(120, 231, 76, 60, true);
 
-    // 3. DOM hit-flash overlay (red vignette)
+    // 3. DOM hit-flash overlay (brief red vignette)
     const flashEl = document.getElementById('hit-flash-overlay');
     if (flashEl) {
       flashEl.classList.add('active');
-      setTimeout(() => flashEl.classList.remove('active'), 200);
+      setTimeout(() => flashEl.classList.remove('active'), 120);
     }
 
     // 4. Float text
@@ -434,37 +433,32 @@ export class GameScene extends Phaser.Scene {
   }
 
   private startDiscoEffect() {
-    // Fade in disco background with MULTIPLY blend
+    // Fade in disco background
     this.tweens.add({
       targets: this.bgDisco,
-      alpha: 0.85,
+      alpha: 0.7,
       duration: 300,
       ease: 'Quad.easeOut'
     });
 
-    // Color cycling overlay (ADD blend for psychedelic glow)
+    // Color cycling overlay (subtle ADD glow)
     const discoColors = [0xff00ff, 0x00ffff, 0xffcc00, 0x66ff66, 0xff6600, 0x6666ff];
     let colorIndex = 0;
 
-    // Initial pulse in
-    this.tweens.add({
-      targets: this.discoOverlay,
-      fillAlpha: 0.12,
-      duration: 200
-    });
+    this.discoOverlay.setFillStyle(discoColors[0], 0.06);
 
     this.discoColorTimer = this.time.addEvent({
-      delay: 280,
+      delay: 350,
       loop: true,
       callback: () => {
         colorIndex = (colorIndex + 1) % discoColors.length;
-        this.discoOverlay.setFillStyle(discoColors[colorIndex], 0.12);
+        this.discoOverlay.setFillStyle(discoColors[colorIndex], 0.06);
 
-        // Pulse effect
+        // Gentle pulse
         this.tweens.add({
           targets: this.discoOverlay,
-          fillAlpha: 0.18,
-          duration: 140,
+          fillAlpha: 0.10,
+          duration: 175,
           yoyo: true,
           ease: 'Sine.easeInOut'
         });
