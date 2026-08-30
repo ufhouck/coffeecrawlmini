@@ -39,7 +39,12 @@ export class SpawnManager {
       
       // Determine if obstacle or collectible
       const roll = Math.random() * 100;
-      const isObstacle = item.forceObstacle || (!item.forceCollectible && roll >= 55);
+      // Level-based obstacle probability: starts easier, gets harder
+      let obstacleThreshold = 65; // base: 35% obstacle chance
+      if (currentLevel > 5) obstacleThreshold = 55;   // 45%
+      if (currentLevel > 15) obstacleThreshold = 48;   // 52%
+      if (currentLevel > 30) obstacleThreshold = 40;   // 60%
+      const isObstacle = item.forceObstacle || (!item.forceCollectible && roll >= obstacleThreshold);
 
       if (isObstacle) {
         const obstacles: ObstacleType[] = ['spilledCoffee', 'brokenCup', 'hotPot'];

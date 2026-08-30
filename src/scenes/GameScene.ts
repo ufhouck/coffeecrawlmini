@@ -21,6 +21,8 @@ export class GameScene extends Phaser.Scene {
   private inputManager!: InputManager;
 
   private bgDisco!: Phaser.GameObjects.Image;
+  private discoOverlay!: Phaser.GameObjects.Rectangle;
+  private discoColorTimer?: Phaser.Time.TimerEvent;
   private hud!: HUD;
   private coinPanelUI!: CoinPanelUI;
   private timerUI!: RoundTimerUI;
@@ -33,6 +35,7 @@ export class GameScene extends Phaser.Scene {
   private obstacles: Obstacle[] = [];
   private isPlaying = false;
   private isGameOver = false;
+  private lastBannerLevel = 1;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -43,6 +46,7 @@ export class GameScene extends Phaser.Scene {
     const H = GAME_CONFIG.height;
     this.isPlaying = true;
     this.isGameOver = false;
+    this.lastBannerLevel = 1;
 
     // Reset room singleton for new round
     roomInstance.reset();
@@ -56,6 +60,12 @@ export class GameScene extends Phaser.Scene {
     this.bgDisco.setDisplaySize(W, H);
     this.bgDisco.setAlpha(0);
     this.bgDisco.setDepth(1);
+    this.bgDisco.setBlendMode(Phaser.BlendModes.MULTIPLY);
+
+    // Color-cycling overlay for disco multiply effect
+    this.discoOverlay = this.add.rectangle(W / 2, H / 2, W, H, 0xff00ff, 0);
+    this.discoOverlay.setDepth(2);
+    this.discoOverlay.setBlendMode(Phaser.BlendModes.ADD);
 
     // 2. Systems Setup
     this.spawnManager = new SpawnManager();
@@ -103,19 +113,21 @@ export class GameScene extends Phaser.Scene {
         this.hud.updateLevel(level, prog, target);
         audioManager.playLevelUp();
         audioManager.updatePacing(level, this.scoreManager.isFastMode);
+        // Level Up banner animation — only on actual level change
+        if (level > 1 && level !== this.lastBannerLevel) {
+          this.lastBannerLevel = level;
+          this.showLevelUpBanner(level);
+        }
       },
       onDiscoModeChange: (active, remaining) => {
         this.hud.setDiscoMode(active, remaining);
         if (active) {
           audioManager.startDiscoMusic();
+          this.startDiscoEffect();
         } else {
           audioManager.stopDiscoMusic();
+          this.stopDiscoEffect();
         }
-        this.tweens.add({
-          targets: this.bgDisco,
-          alpha: active ? 1 : 0,
-          duration: 350
-        });
       },
       onSlowModeChange: (active) => {
         this.hud.setSlowMode(active);
@@ -377,6 +389,109 @@ export class GameScene extends Phaser.Scene {
           }
         });
       }
+    });
+  }
+
+  private showLevelUpBanner(level: number) {
+    const W = GAME_CONFIG.width;
+    const H = GAME_CONFIG.height;
+
+    const banner = this.add.text(W / 2, H * 0.38, `LEVEL ${level}`, {
+      fontFamily: 'Kavoon, sans-serif',
+      fontSize: '42px',
+      color: '#f5c542',
+      stroke: '#4a2a14',
+      strokeThickness: 6,
+      shadow: { blur: 12, color: '#000000', fill: true }
+    }).setOrigin(0.5).setDepth(90).setScale(0).setAlpha(0);
+
+    // Pop in
+    this.tweens.add({
+      targets: banner,
+      scaleX: 1.2,
+      scaleY: 1.2,
+      alpha: 1,
+      duration: 200,
+      ease: 'Back.easeOut',
+      onComplete: () => {
+        // Hold then fade up
+        this.tweens.add({
+          targets: banner,
+          scaleX: 0.9,
+          scaleY: 0.9,
+          y: H * 0.32,
+          alpha: 0,
+          delay: 600,
+          duration: 400,
+          ease: 'Cubic.easeIn',
+          onComplete: () => banner.destroy()
+        });
+      }
+    });
+
+    // Light camera flash on level up
+    this.cameras.main.flash(200, 245, 197, 66);
+  }
+
+  private startDiscoEffect() {
+    // Fade in disco background with MULTIPLY blend
+    this.tweens.add({
+      targets: this.bgDisco,
+      alpha: 0.85,
+      duration: 300,
+      ease: 'Quad.easeOut'
+    });
+
+    // Color cycling overlay (ADD blend for psychedelic glow)
+    const discoColors = [0xff00ff, 0x00ffff, 0xffcc00, 0x66ff66, 0xff6600, 0x6666ff];
+    let colorIndex = 0;
+
+    // Initial pulse in
+    this.tweens.add({
+      targets: this.discoOverlay,
+      fillAlpha: 0.12,
+      duration: 200
+    });
+
+    this.discoColorTimer = this.time.addEvent({
+      delay: 280,
+      loop: true,
+      callback: () => {
+        colorIndex = (colorIndex + 1) % discoColors.length;
+        this.discoOverlay.setFillStyle(discoColors[colorIndex], 0.12);
+
+        // Pulse effect
+        this.tweens.add({
+          targets: this.discoOverlay,
+          fillAlpha: 0.18,
+          duration: 140,
+          yoyo: true,
+          ease: 'Sine.easeInOut'
+        });
+      }
+    });
+  }
+
+  private stopDiscoEffect() {
+    // Stop color cycling
+    if (this.discoColorTimer) {
+      this.discoColorTimer.destroy();
+      this.discoColorTimer = undefined;
+    }
+
+    // Fade out disco background
+    this.tweens.add({
+      targets: this.bgDisco,
+      alpha: 0,
+      duration: 400,
+      ease: 'Quad.easeIn'
+    });
+
+    // Fade out overlay
+    this.tweens.add({
+      targets: this.discoOverlay,
+      fillAlpha: 0,
+      duration: 400
     });
   }
 

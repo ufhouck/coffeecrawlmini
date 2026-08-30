@@ -13,7 +13,7 @@ export class LeaderboardModalUI {
 
     const rows = entries.map(e => {
       const selfClass = e.isSelf ? 'lb-self' : '';
-      const rankIcon = e.rank === 1 ? '🥇' : e.rank === 2 ? '🥈' : e.rank === 3 ? '🥉' : `#${e.rank}`;
+      const rankIcon = e.rank === 1 ? '1st' : e.rank === 2 ? '2nd' : e.rank === 3 ? '3rd' : `#${e.rank}`;
       return `
         <tr class="lb-row ${selfClass}">
           <td class="lb-rank">${rankIcon}</td>

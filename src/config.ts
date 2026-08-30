@@ -45,10 +45,18 @@ export const GAME_CONFIG = {
 
 export const ECONOMY_CONFIG = {
   pointsPerGamePoint: 1,
-  maxGamePoints: 5000,
+  maxGamePoints: 10000,
   minMsBetweenClaims: 500,
   maxClaimPoints: 1000,
-  allocationPerPoint: 0.0025,
+  baseAllocationPerPoint: 0.0025,
+  /** Level-scaled allocation rate — starts low, rewards progression */
+  allocationPerPoint: (level: number): number => {
+    if (level <= 3) return 0.0012;   // 0.5x — early levels earn less
+    if (level <= 10) return 0.0025;  // 1.0x — baseline
+    if (level <= 20) return 0.0033;  // 1.3x
+    if (level <= 35) return 0.0040;  // 1.6x
+    return 0.0050;                   // 2.0x — high levels rewarded
+  },
   defaultRoundSeconds: 180,
   practiceSeconds: 30,
 };

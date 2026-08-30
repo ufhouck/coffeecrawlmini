@@ -1,4 +1,4 @@
-import { GAME_CONFIG } from '../config.ts';
+import { GAME_CONFIG, ECONOMY_CONFIG } from '../config.ts';
 import { roomInstance } from '../room.ts';
 import type { ClaimResult } from '../game/types.ts';
 
@@ -105,7 +105,10 @@ export class ScoreManager {
 
     if (claimResult.success) {
       this.score = claimResult.newTotalScore;
-      this.allocation = claimResult.newAllocation;
+      // Level-aware allocation: higher levels earn more per point
+      const rate = ECONOMY_CONFIG.allocationPerPoint(this.currentLevel);
+      this.allocation = Number((this.score * rate).toFixed(2));
+      claimResult.newAllocation = this.allocation;
       this.levelProgress += 1;
 
       const target = GAME_CONFIG.targetPickups(this.currentLevel);

@@ -54,7 +54,12 @@ export class MenuScene extends Phaser.Scene {
     const bestScoreNum = parseInt(rawBest, 10);
     const bestScoreEl = document.getElementById('menu-best-score');
     if (bestScoreEl) {
-      bestScoreEl.innerText = `🏆 BEST: ${bestScoreNum.toLocaleString()} pts`;
+      if (bestScoreNum > 0) {
+        bestScoreEl.style.display = 'block';
+        bestScoreEl.innerText = `YOUR BEST: ${bestScoreNum.toLocaleString()} pts`;
+      } else {
+        bestScoreEl.style.display = 'none';
+      }
     }
 
     // Check if tutorial needed on first launch

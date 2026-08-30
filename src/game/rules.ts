@@ -100,7 +100,7 @@ export function validateAndApplyClaim(
 
   const effectivePoints = Math.min(points, availableRoom);
   const newScore = currentState.score + effectivePoints;
-  const newAllocation = Number((newScore * ECONOMY_CONFIG.allocationPerPoint).toFixed(2));
+  const newAllocation = Number((newScore * ECONOMY_CONFIG.baseAllocationPerPoint).toFixed(2));
 
   const nextState: EconomyState = {
     ...currentState,

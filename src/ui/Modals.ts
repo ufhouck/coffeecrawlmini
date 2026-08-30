@@ -24,7 +24,7 @@ export class GameOverModalUI {
 
     this.overlayEl.innerHTML = `
       <div class="modal-card">
-        <h2 class="modal-title modal-title-red">${isNewHigh ? '🏆 NEW BEST!' : 'COFFEE SPILLED!'}</h2>
+        <h2 class="modal-title modal-title-red">${isNewHigh ? 'NEW BEST!' : 'COFFEE SPILLED!'}</h2>
         <div class="modal-stats-card">
           <div class="stat-row">
             <span class="stat-label">Score</span>

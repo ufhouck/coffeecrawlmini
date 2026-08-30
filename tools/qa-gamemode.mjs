@@ -68,9 +68,9 @@ const { state: pState1, result: pRes1 } = validateAndApplyClaim(practiceState0, 
 assert(pRes1.success === true && pState1.allocation === 0, 'Practice mode gives 0 real allocation');
 
 // Claim 5: Ceiling limit clamp
-let ceilingState = { ...state3, score: 4990 };
+let ceilingState = { ...state3, score: 9990 };
 const { state: maxState, result: maxRes } = validateAndApplyClaim(ceilingState, 50, now3 + 2000, true);
-assert(maxRes.success === true && maxState.score === 5000, 'Score is properly capped at maxGamePoints = 5000');
+assert(maxRes.success === true && maxState.score === 10000, 'Score is properly capped at maxGamePoints = 10000');
 
 console.log(`\nQA Results: ${passedTests}/${totalTests} tests passed.`);
 if (passedTests === totalTests) {

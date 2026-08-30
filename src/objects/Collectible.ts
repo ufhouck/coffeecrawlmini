@@ -31,6 +31,8 @@ export class Collectible extends Phaser.GameObjects.Container {
       this.sprite.setTint(0xf39c12); // Warm amber hue for fast timer
     } else if (type === 'heartCup') {
       this.sprite.setScale(0.20);
+    } else if (type === 'milk' || type === 'matcha') {
+      this.sprite.setScale(0.24);
     }
 
     this.add(this.sprite);
@@ -129,7 +131,7 @@ export class Collectible extends Phaser.GameObjects.Container {
       case 'goldBean': return 50;
       case 'cherry': return 100;
       case 'croissant': return 200;
-      case 'honeyBean': return 500;
+      case 'honeyBean': return 150;
       case 'milk': return 15;
       case 'matcha': return 25;
       case 'heartCup':
