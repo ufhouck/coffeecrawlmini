@@ -1,6 +1,7 @@
 /**
  * Native DOM HUD — iOS Original Style
  * Wooden badge level, green progress bar, score badge, HP hearts
+ * Animated banners with slide-in and pulse effects
  */
 export class HUD {
   private hudEl: HTMLElement | null;
@@ -79,35 +80,29 @@ export class HUD {
     this.hpContainer.appendChild(count);
   }
 
-  public setDiscoMode(active: boolean, remainingSec = 0) {
-    if (this.discoEl) {
-      if (active) {
-        this.discoEl.style.display = 'block';
-        this.discoEl.innerText = `DISCO 2X: ${Math.ceil(remainingSec)}s`;
-      } else {
-        this.discoEl.style.display = 'none';
-      }
+  /** Show/hide banner with CSS slide-in animation */
+  private showBanner(el: HTMLElement | null, active: boolean, text?: string) {
+    if (!el) return;
+    if (active) {
+      if (text) el.innerText = text;
+      // Force re-trigger animation by removing then adding class
+      el.classList.remove('active');
+      void el.offsetWidth; // reflow
+      el.classList.add('active');
+    } else {
+      el.classList.remove('active');
     }
+  }
+
+  public setDiscoMode(active: boolean, remainingSec = 0) {
+    this.showBanner(this.discoEl, active, active ? `DISCO 2X  ${Math.ceil(remainingSec)}s` : undefined);
   }
 
   public setSlowMode(active: boolean) {
-    if (this.slowEl) {
-      if (active) {
-        this.slowEl.style.display = 'block';
-      } else {
-        this.slowEl.style.display = 'none';
-      }
-    }
+    this.showBanner(this.slowEl, active);
   }
 
   public setFastMode(active: boolean, remainingSec = 0) {
-    if (this.fastEl) {
-      if (active) {
-        this.fastEl.style.display = 'block';
-        this.fastEl.innerText = `FAST MODE 1.5X: ${Math.ceil(remainingSec)}s`;
-      } else {
-        this.fastEl.style.display = 'none';
-      }
-    }
+    this.showBanner(this.fastEl, active, active ? `FAST 1.5X  ${Math.ceil(remainingSec)}s` : undefined);
   }
 }

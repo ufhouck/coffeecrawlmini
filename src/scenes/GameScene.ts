@@ -294,11 +294,11 @@ export class GameScene extends Phaser.Scene {
       }
     } else if (item.collectibleType === 'slowTimer') {
       this.scoreManager.triggerSlowMode();
-      this.showFloatText('SLOW', item.x, item.y - 20, '#3498db');
+      this.showFloatText('SLOW', item.x, item.y - 20, '#74b9ff');
     } else if (item.collectibleType === 'fastTimer') {
       this.scoreManager.triggerFastMode();
       audioManager.playLevelUp();
-      this.showFloatText('⚡ FAST 1.5X', item.x, item.y - 20, '#e67e22');
+      this.showFloatText('FAST 1.5X', item.x, item.y - 20, '#e67e22');
     } else {
       const baseVal = item.getScoreValue();
       const claimRes = this.scoreManager.addCollectiblePoints(baseVal);
@@ -316,32 +316,67 @@ export class GameScene extends Phaser.Scene {
   private handleObstacleHit(obs: Obstacle) {
     obs.onHit();
     audioManager.playHit();
-    this.cameras.main.shake(250, 0.025);
-    this.cameras.main.flash(180, 231, 76, 60);
 
-    this.showFloatText('OUCH', this.player.x, this.player.y - 30, '#e74c3c');
+    // 1. Player wobble + red tint
+    this.player.hit();
+
+    // 2. Camera shake (stronger) + red flash
+    this.cameras.main.shake(320, 0.035);
+    this.cameras.main.flash(200, 231, 76, 60, true);
+
+    // 3. DOM hit-flash overlay (red vignette)
+    const flashEl = document.getElementById('hit-flash-overlay');
+    if (flashEl) {
+      flashEl.classList.add('active');
+      setTimeout(() => flashEl.classList.remove('active'), 200);
+    }
+
+    // 4. Float text
+    this.showFloatText('OUCH!', this.player.x, this.player.y - 30, '#e74c3c', true);
     this.scoreManager.takeDamage();
   }
 
-  private showFloatText(text: string, x: number, y: number, color = '#2ecc71') {
+  private showFloatText(text: string, x: number, y: number, color = '#2ecc71', isHit = false) {
+    const fontSize = isHit ? '28px' : '24px';
+    const strokeColor = isHit ? '#4a0000' : '#1a0d06';
+    const strokeThick = isHit ? 5 : 4;
+
     const txt = this.add.text(x, y, text, {
       fontFamily: 'Kavoon, sans-serif',
-      fontSize: '20px',
+      fontSize: fontSize,
       color: color,
-      stroke: '#ffffff',
-      strokeThickness: 3,
-      shadow: { blur: 6, color: '#000000', fill: true }
-    }).setOrigin(0.5).setDepth(80);
+      stroke: strokeColor,
+      strokeThickness: strokeThick,
+      shadow: { blur: 8, color: '#000000', fill: true }
+    }).setOrigin(0.5).setDepth(80).setScale(0.3).setAlpha(0);
 
+    // Pop-in: scale 0.3 -> 1.3 -> 1.0, then float up and fade
     this.tweens.add({
       targets: txt,
-      y: y - 50,
-      alpha: 0,
-      scaleX: 1.3,
-      scaleY: 1.3,
-      duration: 650,
-      ease: 'Cubic.easeOut',
-      onComplete: () => txt.destroy()
+      scaleX: 1.35,
+      scaleY: 1.35,
+      alpha: 1,
+      duration: 120,
+      ease: 'Back.easeOut',
+      onComplete: () => {
+        this.tweens.add({
+          targets: txt,
+          scaleX: 1.0,
+          scaleY: 1.0,
+          duration: 80,
+          ease: 'Quad.easeIn',
+          onComplete: () => {
+            this.tweens.add({
+              targets: txt,
+              y: y - 60,
+              alpha: 0,
+              duration: 500,
+              ease: 'Cubic.easeOut',
+              onComplete: () => txt.destroy()
+            });
+          }
+        });
+      }
     });
   }
 
@@ -349,6 +384,17 @@ export class GameScene extends Phaser.Scene {
     this.isGameOver = true;
     audioManager.playGameOver();
     this.inputManager.setEnabled(false);
+
+    // Dramatic red flash + strong shake
+    this.cameras.main.shake(500, 0.045);
+    this.cameras.main.flash(350, 200, 30, 30);
+
+    // DOM red vignette
+    const flashEl = document.getElementById('hit-flash-overlay');
+    if (flashEl) {
+      flashEl.classList.add('active');
+      setTimeout(() => flashEl.classList.remove('active'), 400);
+    }
 
     // Spill player cup
     this.player.spill(() => {

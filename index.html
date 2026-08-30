@@ -302,62 +302,76 @@
         justify-content: center;
       }
 
-      /* ========= Disco / Slow / Fast Banners (Exact Same Position & Geometry) ========= */
-      #disco-banner {
-        position: absolute;
-        top: 86px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 60;
-        font-family: 'Kavoon', sans-serif;
-        font-size: 13px;
-        color: #f5c542;
-        background: rgba(42, 26, 14, 0.92);
-        border: 2px solid #f5c542;
-        border-radius: 14px;
-        padding: 3px 14px;
-        display: none;
-        pointer-events: none;
-        white-space: nowrap;
-        animation: disco-glow 0.5s ease-in-out infinite alternate;
+      /* ========= Disco / Slow / Fast Banners (Animated) ========= */
+      @keyframes banner-slide-in {
+        0% { transform: translateX(-50%) translateY(-20px) scale(0.7); opacity: 0; }
+        60% { transform: translateX(-50%) translateY(4px) scale(1.08); opacity: 1; }
+        100% { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
       }
       @keyframes disco-glow {
-        from { box-shadow: 0 0 8px rgba(245, 197, 66, 0.4); }
-        to { box-shadow: 0 0 18px rgba(245, 197, 66, 0.8); }
+        from { box-shadow: 0 0 8px rgba(245, 197, 66, 0.4), inset 0 0 4px rgba(245, 197, 66, 0.1); }
+        to { box-shadow: 0 0 22px rgba(245, 197, 66, 0.9), inset 0 0 8px rgba(245, 197, 66, 0.2); }
       }
+      @keyframes slow-pulse {
+        from { box-shadow: 0 0 6px rgba(116, 185, 255, 0.3); }
+        to { box-shadow: 0 0 16px rgba(116, 185, 255, 0.7); }
+      }
+      @keyframes fast-pulse {
+        from { box-shadow: 0 0 6px rgba(230, 126, 34, 0.3); }
+        to { box-shadow: 0 0 18px rgba(230, 126, 34, 0.8); }
+      }
+      .mode-banner {
+        position: absolute;
+        top: 86px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 60;
+        font-family: 'Kavoon', sans-serif;
+        font-size: 14px;
+        font-weight: bold;
+        letter-spacing: 1px;
+        border-radius: 16px;
+        padding: 5px 18px;
+        display: none;
+        pointer-events: none;
+        white-space: nowrap;
+        text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+      }
+      .mode-banner.active {
+        display: block;
+        animation: banner-slide-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+      }
+      #disco-banner {
+        color: #f5c542;
+        background: linear-gradient(135deg, rgba(42, 26, 14, 0.95), rgba(80, 40, 10, 0.95));
+        border: 2px solid #f5c542;
+      }
+      #disco-banner.active { animation: banner-slide-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards, disco-glow 0.5s ease-in-out infinite alternate 0.35s; }
       #slow-banner {
-        position: absolute;
-        top: 86px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 60;
-        font-family: 'Kavoon', sans-serif;
-        font-size: 13px;
         color: #74b9ff;
-        background: rgba(42, 26, 14, 0.92);
+        background: linear-gradient(135deg, rgba(20, 30, 50, 0.95), rgba(30, 50, 80, 0.95));
         border: 2px solid #74b9ff;
-        border-radius: 14px;
-        padding: 3px 14px;
-        display: none;
-        pointer-events: none;
-        white-space: nowrap;
       }
+      #slow-banner.active { animation: banner-slide-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards, slow-pulse 0.6s ease-in-out infinite alternate 0.35s; }
       #fast-banner {
-        position: absolute;
-        top: 86px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 60;
-        font-family: 'Kavoon', sans-serif;
-        font-size: 13px;
         color: #e67e22;
-        background: rgba(42, 26, 14, 0.92);
+        background: linear-gradient(135deg, rgba(50, 25, 10, 0.95), rgba(80, 35, 10, 0.95));
         border: 2px solid #e67e22;
-        border-radius: 14px;
-        padding: 3px 14px;
-        display: none;
+      }
+      #fast-banner.active { animation: banner-slide-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards, fast-pulse 0.45s ease-in-out infinite alternate 0.35s; }
+
+      /* ========= Hit Flash Overlay ========= */
+      #hit-flash-overlay {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        z-index: 70;
         pointer-events: none;
-        white-space: nowrap;
+        background: radial-gradient(circle at 50% 75%, rgba(231, 76, 60, 0.5), transparent 60%);
+        opacity: 0;
+        transition: opacity 0.08s ease-out;
+      }
+      #hit-flash-overlay.active {
+        opacity: 1;
       }
 
       /* ========= Allocation Toast ========= */
@@ -767,9 +781,12 @@
           <div id="hud-hp-container"></div>
 
           <!-- Disco / Slow / Fast Mode Banners -->
-          <div id="disco-banner" style="display: none;">DISCO 2X</div>
-          <div id="slow-banner" style="display: none;">SLOW MODE</div>
-          <div id="fast-banner" style="display: none;">⚡ FAST 1.5X</div>
+          <div id="disco-banner" class="mode-banner">DISCO 2X</div>
+          <div id="slow-banner" class="mode-banner">SLOW MODE</div>
+          <div id="fast-banner" class="mode-banner">FAST 1.5X</div>
+
+          <!-- Hit Flash Overlay -->
+          <div id="hit-flash-overlay"></div>
 
           <!-- Allocation Beat Toasts -->
           <div id="allocation-toast-container"></div>

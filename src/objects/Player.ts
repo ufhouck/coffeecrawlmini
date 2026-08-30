@@ -126,6 +126,53 @@ export class Player extends Phaser.GameObjects.Container {
     });
   }
 
+  /** Dramatic hit reaction — wobble, red tint flash, scale punch */
+  public hit() {
+    // Red tint flash
+    this.cupSprite.setTint(0xff4444);
+    this.scene.time.delayedCall(220, () => {
+      this.cupSprite.clearTint();
+    });
+
+    // Scale punch (big -> small -> normal)
+    this.scene.tweens.add({
+      targets: this.cupSprite,
+      scaleX: 0.40,
+      scaleY: 0.24,
+      duration: 80,
+      yoyo: true,
+      ease: 'Quad.easeOut',
+      onComplete: () => {
+        this.cupSprite.setScale(0.31, 0.31);
+      }
+    });
+
+    // Rapid wobble shake
+    this.scene.tweens.add({
+      targets: this.cupSprite,
+      rotation: 0.22,
+      duration: 50,
+      yoyo: true,
+      repeat: 3,
+      ease: 'Sine.easeInOut',
+      onComplete: () => {
+        this.cupSprite.rotation = 0;
+      }
+    });
+
+    // Brief opacity blink (invulnerability feel)
+    this.scene.tweens.add({
+      targets: this.cupSprite,
+      alpha: 0.3,
+      duration: 80,
+      yoyo: true,
+      repeat: 2,
+      onComplete: () => {
+        this.cupSprite.setAlpha(1);
+      }
+    });
+  }
+
   public spill(onComplete?: () => void) {
     this.playerState = 'spilled';
     this.cupSprite.stop();
