@@ -1,0 +1,8 @@
+{
+  "name": "Coffee Crawl: Bean Runner",
+  "upstream": "https://github.com/ufhouck/coffeecrawlmini",
+  "author": "ufhouck",
+  "description": "Flaunch Game Mode Web Port of Coffee Crawl - 2.5D endless 3-lane bean runner with claims-bounded economy.",
+  "target": "Flaunch Game Mode",
+  "version": "1.0.0"
+}

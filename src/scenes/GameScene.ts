@@ -1,0 +1,412 @@
+import Phaser from 'phaser';
+import { GAME_CONFIG } from '../config.ts';
+import { Player } from '../objects/Player.ts';
+import { Collectible } from '../objects/Collectible.ts';
+import { Obstacle } from '../objects/Obstacle.ts';
+import { SpawnManager } from '../systems/SpawnManager.ts';
+import { ScoreManager } from '../systems/ScoreManager.ts';
+import { InputManager } from '../systems/InputManager.ts';
+import { audioManager } from '../systems/AudioManager.ts';
+import { HUD } from '../ui/HUD.ts';
+import { CoinPanelUI } from '../ui/CoinPanel.ts';
+import { RoundTimerUI, PracticeOverlayUI, AllocationBeatUI } from '../ui/RoundTimer.ts';
+import { GameOverModalUI, EndScreenModalUI } from '../ui/Modals.ts';
+import { roomInstance } from '../room.ts';
+import type { CollectibleType, ObstacleType } from '../game/types.ts';
+
+export class GameScene extends Phaser.Scene {
+  private player!: Player;
+  private spawnManager!: SpawnManager;
+  private scoreManager!: ScoreManager;
+  private inputManager!: InputManager;
+
+  private bgDisco!: Phaser.GameObjects.Image;
+  private hud!: HUD;
+  private coinPanelUI!: CoinPanelUI;
+  private timerUI!: RoundTimerUI;
+  private practiceUI!: PracticeOverlayUI;
+  private beatUI!: AllocationBeatUI;
+  private gameOverModalUI!: GameOverModalUI;
+  private endScreenModalUI!: EndScreenModalUI;
+
+  private collectibles: Collectible[] = [];
+  private obstacles: Obstacle[] = [];
+  private isPlaying = false;
+  private isGameOver = false;
+
+  constructor() {
+    super({ key: 'GameScene' });
+  }
+
+  public create() {
+    const W = GAME_CONFIG.width;
+    const H = GAME_CONFIG.height;
+    this.isPlaying = true;
+    this.isGameOver = false;
+
+    // Reset room singleton for new round
+    roomInstance.reset();
+
+    // 1. Backgrounds
+    const bgNormal = this.add.image(W / 2, H / 2, 'bg_cafe');
+    bgNormal.setDisplaySize(W, H);
+    bgNormal.setDepth(0);
+
+    this.bgDisco = this.add.image(W / 2, H / 2, 'bg_disco');
+    this.bgDisco.setDisplaySize(W, H);
+    this.bgDisco.setAlpha(0);
+    this.bgDisco.setDepth(1);
+
+    // 2. Systems Setup
+    this.spawnManager = new SpawnManager();
+    this.scoreManager = new ScoreManager();
+
+    // 3. UI Setup (Native Retina DOM)
+    this.hud = new HUD();
+    this.hud.setVisible(true);
+
+    // Show timer elements
+    const timerEl = document.getElementById('round-timer');
+    if (timerEl) timerEl.style.display = 'block';
+    const timerBarEl = document.getElementById('timer-bar');
+    if (timerBarEl) timerBarEl.style.display = 'block';
+
+    this.coinPanelUI = new CoinPanelUI();
+    this.coinPanelUI.show();
+    this.timerUI = new RoundTimerUI();
+    this.practiceUI = new PracticeOverlayUI();
+    this.beatUI = new AllocationBeatUI();
+    this.gameOverModalUI = new GameOverModalUI();
+    this.endScreenModalUI = new EndScreenModalUI();
+
+    // 4. Player Setup
+    this.player = new Player(this, 1);
+    this.player.setDepth(20);
+
+    // 5. Input Setup
+    this.inputManager = new InputManager(
+      this,
+      () => this.handleMoveLeft(),
+      () => this.handleMoveRight()
+    );
+
+    // 6. Hook ScoreManager callbacks
+    this.scoreManager.setCallbacks({
+      onScoreUpdate: (score, alloc, mult) => {
+        this.hud.updateScore(score, alloc, mult);
+        this.coinPanelUI.updateAllocation(alloc);
+      },
+      onLivesUpdate: (lives) => {
+        this.hud.updateLives(lives);
+      },
+      onLevelUpdate: (level, prog, target) => {
+        this.hud.updateLevel(level, prog, target);
+        audioManager.playLevelUp();
+        audioManager.updatePacing(level, this.scoreManager.isFastMode);
+      },
+      onDiscoModeChange: (active, remaining) => {
+        this.hud.setDiscoMode(active, remaining);
+        if (active) {
+          audioManager.startDiscoMusic();
+        } else {
+          audioManager.stopDiscoMusic();
+        }
+        this.tweens.add({
+          targets: this.bgDisco,
+          alpha: active ? 1 : 0,
+          duration: 350
+        });
+      },
+      onSlowModeChange: (active) => {
+        this.hud.setSlowMode(active);
+      },
+      onFastModeChange: (active, remaining) => {
+        this.hud.setFastMode(active, remaining);
+        audioManager.updatePacing(this.scoreManager.currentLevel, active);
+      },
+      onGameOver: () => {
+        audioManager.stopMusic();
+        this.handleGameOver();
+      }
+    });
+
+    // Start dynamic adaptive runner music
+    audioManager.startMusic(1);
+    const soundBtn = document.getElementById('sound-toggle-btn');
+    const soundImg = document.getElementById('sound-icon-img') as HTMLImageElement | null;
+    if (soundBtn) {
+      soundBtn.style.display = 'flex';
+      if (soundImg) {
+        soundImg.src = audioManager.isMuted ? './assets/images/sound-off.svg' : './assets/images/sound-on.svg';
+      }
+      soundBtn.onclick = () => {
+        const isMuted = audioManager.toggleMute();
+        if (soundImg) {
+          soundImg.src = isMuted ? './assets/images/sound-off.svg' : './assets/images/sound-on.svg';
+        }
+      };
+    }
+
+    // 7. Hook Room Listeners
+    roomInstance.setListener({
+      onTimerTick: (remaining, _total, isPractice, opensIn) => {
+        this.timerUI.update(remaining);
+        this.practiceUI.setPractice(isPractice, opensIn);
+      },
+      onRoundEnd: (finalState) => {
+        this.isPlaying = false;
+        this.hud.setVisible(false);
+        this.endScreenModalUI.show(
+          finalState,
+          () => {
+            this.cleanAndRestart();
+          },
+          () => {
+            this.goToLobby();
+          }
+        );
+      }
+    });
+
+    this.scoreManager.reset();
+    this.spawnManager.reset();
+
+    // Initial HUD state
+    this.hud.updateLives(GAME_CONFIG.maxLives);
+    this.hud.updateLevel(1, 0, GAME_CONFIG.targetPickups(1));
+    this.hud.updateScore(0, 0, 1);
+  }
+
+  private handleMoveLeft() {
+    if (!this.isPlaying || this.isGameOver) return;
+    if (this.player.currentLane > 0) {
+      this.player.switchLane(this.player.currentLane - 1);
+    }
+  }
+
+  private handleMoveRight() {
+    if (!this.isPlaying || this.isGameOver) return;
+    if (this.player.currentLane < 2) {
+      this.player.switchLane(this.player.currentLane + 1);
+    }
+  }
+
+  public update(_time: number, delta: number) {
+    if (!this.isPlaying || this.isGameOver) return;
+    const deltaSec = delta / 1000;
+
+    // 1. Update managers
+    this.scoreManager.update(deltaSec);
+    const currentSpeed = this.scoreManager.getCurrentSpeed();
+
+    // 2. Update spawns
+    this.spawnManager.update(
+      deltaSec,
+      currentSpeed,
+      this.scoreManager.currentLevel,
+      (lane, isObs, cType, oType) => this.spawnItem(lane, isObs, cType, oType)
+    );
+
+    // 3. Move and update Collectibles
+    const moveDist = currentSpeed * deltaSec;
+    for (let i = this.collectibles.length - 1; i >= 0; i--) {
+      const item = this.collectibles[i];
+      if (item.isCollected) continue;
+
+      const newY = item.y + moveDist;
+      item.updatePerspective(newY);
+
+      // Check Collision with Player
+      if (
+        Math.abs(item.y - GAME_CONFIG.playerY) < GAME_CONFIG.collectHitRadius &&
+        item.laneIndex === this.player.currentLane &&
+        this.player.playerState !== 'spilled'
+      ) {
+        this.handleCollectiblePickup(item);
+        this.collectibles.splice(i, 1);
+        continue;
+      }
+
+      // Exit off-screen
+      if (newY >= GAME_CONFIG.exitY) {
+        item.destroy();
+        this.collectibles.splice(i, 1);
+      }
+    }
+
+    // 4. Move and update Obstacles
+    for (let i = this.obstacles.length - 1; i >= 0; i--) {
+      const obs = this.obstacles[i];
+      const newY = obs.y + moveDist;
+      obs.updatePerspective(newY);
+
+      // Check Collision with Player
+      if (
+        !obs.hasHit &&
+        Math.abs(obs.y - GAME_CONFIG.playerY) < GAME_CONFIG.obstacleHitRadius &&
+        obs.laneIndex === this.player.currentLane &&
+        this.player.playerState !== 'spilled'
+      ) {
+        this.handleObstacleHit(obs);
+        this.obstacles.splice(i, 1);
+        continue;
+      }
+
+      // Exit off-screen
+      if (newY >= GAME_CONFIG.exitY) {
+        obs.destroy();
+        this.obstacles.splice(i, 1);
+      }
+    }
+  }
+
+  private spawnItem(lane: number, isObstacle: boolean, cType?: CollectibleType, oType?: ObstacleType) {
+    if (isObstacle && oType) {
+      const obs = new Obstacle(this, lane, oType, GAME_CONFIG.spawnY);
+      obs.setDepth(10);
+      this.obstacles.push(obs);
+    } else if (!isObstacle && cType) {
+      const col = new Collectible(this, lane, cType, GAME_CONFIG.spawnY);
+      col.setDepth(11);
+      this.collectibles.push(col);
+    }
+  }
+
+  private handleCollectiblePickup(item: Collectible) {
+    const isGold = item.collectibleType === 'goldBean' || item.collectibleType === 'honeyBean';
+    if (item.collectibleType === 'honeyBean') {
+      audioManager.playHoney();
+      this.scoreManager.triggerDiscoMode();
+      this.cameras.main.shake(300, 0.015);
+    } else {
+      audioManager.playCollect(isGold);
+    }
+
+    // Special items
+    if (item.collectibleType === 'heartCup') {
+      const lifeAdded = this.scoreManager.addLife();
+      if (lifeAdded) {
+        audioManager.playLevelUp();
+        this.showFloatText('+1 LIFE', item.x, item.y - 20, '#2ecc71');
+      } else {
+        audioManager.playCollect(true);
+        this.showFloatText('FULL HP', item.x, item.y - 20, '#f5c542');
+      }
+    } else if (item.collectibleType === 'slowTimer') {
+      this.scoreManager.triggerSlowMode();
+      this.showFloatText('SLOW', item.x, item.y - 20, '#3498db');
+    } else if (item.collectibleType === 'fastTimer') {
+      this.scoreManager.triggerFastMode();
+      audioManager.playLevelUp();
+      this.showFloatText('⚡ FAST 1.5X', item.x, item.y - 20, '#e67e22');
+    } else {
+      const baseVal = item.getScoreValue();
+      const claimRes = this.scoreManager.addCollectiblePoints(baseVal);
+      if (claimRes.success && claimRes.awardedPoints > 0) {
+        const bonusStr = this.scoreManager.isDiscoMode ? ' (2X)' : '';
+        const allocAdd = (claimRes.awardedPoints * 0.0025).toFixed(2);
+        this.showFloatText(`+${claimRes.awardedPoints}${bonusStr}`, item.x, item.y - 20, '#2ecc71');
+        this.beatUI.triggerBeat(Number(allocAdd));
+      }
+    }
+
+    item.collect();
+  }
+
+  private handleObstacleHit(obs: Obstacle) {
+    obs.onHit();
+    audioManager.playHit();
+    this.cameras.main.shake(250, 0.025);
+    this.cameras.main.flash(180, 231, 76, 60);
+
+    this.showFloatText('OUCH', this.player.x, this.player.y - 30, '#e74c3c');
+    this.scoreManager.takeDamage();
+  }
+
+  private showFloatText(text: string, x: number, y: number, color = '#2ecc71') {
+    const txt = this.add.text(x, y, text, {
+      fontFamily: 'Kavoon, sans-serif',
+      fontSize: '20px',
+      color: color,
+      stroke: '#ffffff',
+      strokeThickness: 3,
+      shadow: { blur: 6, color: '#000000', fill: true }
+    }).setOrigin(0.5).setDepth(80);
+
+    this.tweens.add({
+      targets: txt,
+      y: y - 50,
+      alpha: 0,
+      scaleX: 1.3,
+      scaleY: 1.3,
+      duration: 650,
+      ease: 'Cubic.easeOut',
+      onComplete: () => txt.destroy()
+    });
+  }
+
+  private handleGameOver() {
+    this.isGameOver = true;
+    audioManager.playGameOver();
+    this.inputManager.setEnabled(false);
+
+    // Spill player cup
+    this.player.spill(() => {
+      const currentHigh = parseInt(localStorage.getItem('coffeecrawl_high_score') || '0', 10);
+      if (this.scoreManager.score > currentHigh) {
+        localStorage.setItem('coffeecrawl_high_score', this.scoreManager.score.toString());
+      }
+
+      // Show Native DOM Game Over Modal
+      this.gameOverModalUI.show(
+        this.scoreManager.score,
+        this.scoreManager.allocation,
+        () => {
+          this.cleanAndRestart();
+        },
+        () => {
+          this.goToLobby();
+        }
+      );
+    });
+  }
+
+  private goToLobby() {
+    audioManager.stopMusic();
+    const soundBtn = document.getElementById('sound-toggle-btn');
+    if (soundBtn) soundBtn.style.display = 'none';
+    this.hud.setVisible(false);
+    this.coinPanelUI.hide();
+    this.gameOverModalUI.hide();
+    this.endScreenModalUI.hide();
+    this.scene.start('MenuScene');
+  }
+
+  private cleanAndRestart() {
+    this.collectibles.forEach(c => c.destroy());
+    this.obstacles.forEach(o => o.destroy());
+    this.collectibles = [];
+    this.obstacles = [];
+
+    this.gameOverModalUI.hide();
+    this.endScreenModalUI.hide();
+
+    this.isGameOver = false;
+    this.isPlaying = true;
+    this.inputManager.setEnabled(true);
+    this.player.reset(1);
+    this.scoreManager.reset();
+    this.spawnManager.reset();
+    this.hud.setVisible(true);
+    this.scene.restart();
+  }
+
+  public shutdown() {
+    audioManager.stopMusic();
+    const soundBtn = document.getElementById('sound-toggle-btn');
+    if (soundBtn) soundBtn.style.display = 'none';
+    this.inputManager.destroy();
+    this.hud.setVisible(false);
+    this.coinPanelUI.hide();
+  }
+}

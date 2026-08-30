@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Coffee Crawl: Bean Runner</title>
+    <style>
+      @font-face {
+        font-family: 'Kavoon';
+        src: url('./assets/fonts/Kavoon-Regular.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+      }
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background-color: #0b0604;
+        font-family: 'Kavoon', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        color: #f6e8da;
+      }
+      #app {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: radial-gradient(circle at center, #1f100a 0%, #060302 100%);
+        overflow: hidden;
+      }
+      #game-wrapper {
+        position: relative;
+        width: min(100vw, 414px, calc(100vh * (414 / 736)));
+        height: min(100vh, 736px, calc(100vw * (736 / 414)));
+        aspect-ratio: 414 / 736;
+        box-shadow: 0 16px 50px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(230, 160, 90, 0.2);
+        overflow: hidden;
+        border-radius: 16px;
+        background-color: #120906;
+      }
+      #game-container {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+      }
+      #game-container canvas {
+        display: block;
+        width: 100% !important;
+        height: 100% !important;
+      }
+
+      /* ========= 3D Button Styles ========= */
+      .p-btn-green {
+        background: url('./assets/images/p-button.png') no-repeat center center / 100% 100%;
+        color: #ffffff;
+        font-family: 'Kavoon', sans-serif;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+        border: none;
+        outline: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        filter: drop-shadow(0 4px 10px rgba(39, 174, 96, 0.45));
+        transition: transform 0.1s ease, filter 0.1s ease;
+      }
+      .p-btn-green:hover {
+        transform: scale(1.04);
+        filter: drop-shadow(0 6px 14px rgba(39, 174, 96, 0.65));
+      }
+      .p-btn-green:active {
+        transform: scale(0.96);
+      }
+
+      .p-btn-brown {
+        background: url('./assets/images/p-button-brown.png') no-repeat center center / 100% 100%;
+        color: #f6e8da;
+        font-family: 'Kavoon', sans-serif;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+        border: none;
+        outline: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        filter: drop-shadow(0 3px 8px rgba(80, 40, 10, 0.4));
+        transition: transform 0.1s ease, filter 0.1s ease;
+      }
+      .p-btn-brown:hover {
+        transform: scale(1.04);
+      }
+      .p-btn-brown:active {
+        transform: scale(0.96);
+      }
+
+      /* ========= Flaunch UI Overlay ========= */
+      #flaunch-ui-overlay {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        pointer-events: none;
+        z-index: 50;
+      }
+      #flaunch-ui-overlay .interactive {
+        pointer-events: auto;
+      }
+
+      /* ========= Round Timer (Top-Left Stopwatch Badge) ========= */
+      #round-timer {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 60;
+        font-family: 'Kavoon', sans-serif;
+        font-size: 14px;
+        color: #ffbe76;
+        background: rgba(42, 26, 14, 0.92);
+        border: 2px solid #c89245;
+        border-radius: 16px;
+        padding: 4px 12px;
+        pointer-events: none;
+        display: none;
+        box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+      }
+      .timer-warning {
+        animation: pulse-timer 0.5s ease-in-out infinite;
+      }
+      @keyframes pulse-timer {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.55; }
+      }
+
+      /* ========= Sound Toggle Button (Top-Right) ========= */
+      #sound-toggle-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 65;
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: rgba(42, 26, 14, 0.92);
+        border: 2px solid #c89245;
+        cursor: pointer;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+        transition: transform 0.1s ease, background 0.1s ease;
+        padding: 0;
+      }
+      #sound-toggle-btn:hover {
+        transform: scale(1.08);
+        background: rgba(60, 36, 20, 0.95);
+      }
+      #sound-toggle-btn:active {
+        transform: scale(0.94);
+      }
+      #sound-icon-img {
+        width: 18px;
+        height: 16px;
+        display: block;
+        pointer-events: none;
+      }
+
+      /* ========= Practice Indicator (Bottom-Left, Opposite to HP) ========= */
+      #practice-indicator {
+        position: absolute;
+        bottom: 58px;
+        left: 10px;
+        z-index: 65;
+        font-family: 'Kavoon', sans-serif;
+        font-size: 12px;
+        color: #f5c542;
+        background: rgba(42, 26, 14, 0.95);
+        border: 2px solid #f5c542;
+        border-radius: 14px;
+        padding: 4px 12px;
+        display: none;
+        pointer-events: none;
+        box-shadow: 0 0 12px rgba(245, 197, 66, 0.45);
+        animation: practice-pulse 1.2s ease-in-out infinite alternate;
+      }
+      @keyframes practice-pulse {
+        from { transform: scale(1); }
+        to { transform: scale(1.03); }
+      }
+
+      /* ========= iOS-Style Game HUD (Below Timer) ========= */
+      #dom-hud {
+        position: absolute;
+        top: 52px;
+        left: 10px;
+        right: 10px;
+        z-index: 55;
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        pointer-events: none;
+      }
+
+      .hud-badge {
+        background: url('./assets/images/p-button-brown.png') no-repeat center center / 100% 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 12px;
+        min-width: 72px;
+        height: 28px;
+        box-sizing: border-box;
+      }
+
+      #hud-level-badge {
+        flex: 0 0 auto;
+      }
+      #hud-level-label {
+        font-family: 'Kavoon', sans-serif;
+        font-size: 12px;
+        color: #f6e8da;
+        white-space: nowrap;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+      }
+
+      #hud-progress-bar {
+        flex: 1;
+        height: 14px;
+        background: rgba(42, 26, 14, 0.85);
+        border: 2px solid #c89245;
+        border-radius: 8px;
+        overflow: hidden;
+        position: relative;
+        min-width: 80px;
+      }
+      #hud-progress-fill {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(180deg, #6ddf4d 0%, #2ecc71 40%, #1fa55a 100%);
+        border-radius: 6px;
+        transition: width 0.3s ease;
+        box-shadow: inset 0 -2px 3px rgba(0,0,0,0.25), inset 0 2px 3px rgba(255,255,255,0.2);
+      }
+
+      #hud-score-badge {
+        flex: 0 0 auto;
+      }
+      #hud-score-label {
+        font-family: 'Kavoon', sans-serif;
+        font-size: 13px;
+        color: #f5c542;
+        white-space: nowrap;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+      }
+
+      /* ========= HP Container (Bottom-Right, Above CoinPanel) ========= */
+      #hud-hp-container {
+        position: absolute;
+        bottom: 58px;
+        right: 10px;
+        z-index: 55;
+        display: none;
+        align-items: center;
+        gap: 4px;
+        pointer-events: none;
+      }
+      .hp-label {
+        font-family: 'Kavoon', sans-serif;
+        font-size: 13px;
+        color: #f6e8da;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        margin-right: 2px;
+      }
+      .hp-cup-icon {
+        width: 22px;
+        height: 22px;
+        object-fit: contain;
+        filter: drop-shadow(0 1px 3px rgba(0,0,0,0.6));
+        transition: opacity 0.2s ease;
+      }
+      .hp-count {
+        font-family: 'Kavoon', sans-serif;
+        font-size: 14px;
+        color: #ff6b6b;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+        background: rgba(200, 60, 60, 0.35);
+        border-radius: 50%;
+        width: 22px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* ========= Disco / Slow / Fast Banners (Exact Same Position & Geometry) ========= */
+      #disco-banner {
+        position: absolute;
+        top: 86px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 60;
+        font-family: 'Kavoon', sans-serif;
+        font-size: 13px;
+        color: #f5c542;
+        background: rgba(42, 26, 14, 0.92);
+        border: 2px solid #f5c542;
+        border-radius: 14px;
+        padding: 3px 14px;
+        display: none;
+        pointer-events: none;
+        white-space: nowrap;
+        animation: disco-glow 0.5s ease-in-out infinite alternate;
+      }
+      @keyframes disco-glow {
+        from { box-shadow: 0 0 8px rgba(245, 197, 66, 0.4); }
+        to { box-shadow: 0 0 18px rgba(245, 197, 66, 0.8); }
+      }
+      #slow-banner {
+        position: absolute;
+        top: 86px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 60;
+        font-family: 'Kavoon', sans-serif;
+        font-size: 13px;
+        color: #74b9ff;
+        background: rgba(42, 26, 14, 0.92);
+        border: 2px solid #74b9ff;
+        border-radius: 14px;
+        padding: 3px 14px;
+        display: none;
+        pointer-events: none;
+        white-space: nowrap;
+      }
+      #fast-banner {
+        position: absolute;
+        top: 86px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 60;
+        font-family: 'Kavoon', sans-serif;
+        font-size: 13px;
+        color: #e67e22;
+        background: rgba(42, 26, 14, 0.92);
+        border: 2px solid #e67e22;
+        border-radius: 14px;
+        padding: 3px 14px;
+        display: none;
+        pointer-events: none;
+        white-space: nowrap;
+      }
+
+      /* ========= Allocation Toast ========= */
+      #allocation-toast-container {
+        position: absolute;
+        top: 100px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 65;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        pointer-events: none;
+      }
+      .claim-beat {
+        font-family: 'Kavoon', sans-serif;
+        font-size: 14px;
+        color: #2ecc71;
+        text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        animation: beat-float 1.2s ease-out forwards;
+        opacity: 0;
+      }
+      .beat-icon {
+        width: 16px;
+        height: 16px;
+        object-fit: contain;
+      }
+      @keyframes beat-float {
+        0% { opacity: 0; transform: translateY(8px) scale(0.8); }
+        20% { opacity: 1; transform: translateY(0) scale(1.1); }
+        100% { opacity: 0; transform: translateY(-30px) scale(0.9); }
+      }
+
+      /* ========= Center-Aligned Lobby Overlay ========= */
+      #menu-dom-overlay {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        z-index: 70;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        pointer-events: auto;
+      }
+      #menu-logo {
+        width: 195px;
+        height: auto;
+        filter: drop-shadow(0 4px 12px rgba(0,0,0,0.6));
+        margin-bottom: 2px;
+      }
+      #menu-subtitle {
+        font-family: 'Kavoon', sans-serif;
+        font-size: 12px;
+        color: #c89245;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.7);
+        letter-spacing: 2px;
+        white-space: nowrap;
+        margin-bottom: 16px;
+      }
+      #menu-cup-anim {
+        width: 140px;
+        height: 140px;
+        margin: 0 auto 18px auto;
+        object-fit: contain;
+        pointer-events: none;
+        filter: drop-shadow(0 8px 16px rgba(0,0,0,0.6));
+      }
+      #menu-best-score {
+        font-family: 'Kavoon', sans-serif;
+        font-size: 14px;
+        color: #f5c542;
+        background: rgba(42, 26, 14, 0.92);
+        border: 2px solid #c89245;
+        border-radius: 16px;
+        padding: 5px 18px;
+        margin-bottom: 16px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.5);
+        text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+      }
+      .menu-btn-row {
+        display: flex;
+        gap: 14px;
+        width: 100%;
+        justify-content: center;
+        margin-top: 28px;
+        margin-bottom: 6px;
+      }
+      /* Exact 3.0:1 pixel ratio for START RUN (216x72px) */
+      #menu-start-btn {
+        width: 216px;
+        height: 72px;
+        font-size: 22px;
+      }
+      #menu-tutorial-btn,
+      #menu-ranks-btn {
+        width: 135px;
+        height: 42px;
+        font-size: 13px;
+      }
+      #menu-footer {
+        position: absolute;
+        bottom: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-family: 'Kavoon', sans-serif;
+        font-size: 11px;
+        color: rgba(200, 146, 69, 0.55);
+        letter-spacing: 1px;
+        white-space: nowrap;
+        pointer-events: none;
+      }
+
+      /* ========= Flaunch Coin Panel ========= */
+      #flaunch-coin-panel {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 48px;
+        z-index: 75;
+        background: linear-gradient(180deg, rgba(42, 26, 14, 0.95) 0%, rgba(26, 13, 6, 0.98) 100%);
+        border-top: 2px solid #c89245;
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+        padding: 6px 12px;
+        font-family: 'Kavoon', sans-serif;
+        font-size: 12px;
+        pointer-events: auto;
+      }
+      .coin-panel-left {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .coin-panel-icon {
+        width: 22px;
+        height: 22px;
+        object-fit: contain;
+        border-radius: 50%;
+      }
+      .coin-panel-ticker {
+        font-size: 13px;
+        color: #f5c542;
+        font-weight: bold;
+      }
+      .coin-panel-price {
+        font-size: 11px;
+        color: #f6e8da;
+      }
+      .coin-panel-change {
+        font-size: 10px;
+        color: #2ecc71;
+      }
+      .coin-panel-center {
+        text-align: center;
+      }
+      .coin-panel-alloc-label {
+        font-size: 9px;
+        color: #c89245;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      #coin-panel-allocation {
+        font-size: 15px;
+        color: #2ecc71;
+      }
+      #coin-panel-buy-btn {
+        font-size: 11px;
+        width: 100px;
+        height: 34px;
+      }
+
+      /* ========= Modal Shared Styles (Warm Coffee Palette) ========= */
+      .modal-overlay {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        z-index: 80;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(11, 6, 4, 0.7);
+        pointer-events: auto;
+      }
+      .modal-card {
+        background: linear-gradient(145deg, #2a1a0e 0%, #1a0d06 100%);
+        border: 2px solid #c89245;
+        border-radius: 20px;
+        padding: 24px 20px;
+        width: 88%;
+        max-width: 330px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 14px;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.8), inset 0 1px 0 rgba(200, 146, 69, 0.15);
+      }
+      .modal-title {
+        font-family: 'Kavoon', sans-serif;
+        font-size: 24px;
+        text-shadow: 0 3px 6px rgba(0,0,0,0.7);
+        letter-spacing: 1px;
+        text-align: center;
+      }
+      .modal-title-red { color: #ff6b35; }
+      .modal-title-green { color: #2ecc71; }
+      .modal-title-gold { color: #f5c542; }
+
+      .modal-stats-card {
+        width: 100%;
+        background: rgba(42, 26, 14, 0.6);
+        border: 1px solid rgba(200, 146, 69, 0.3);
+        border-radius: 14px;
+        padding: 12px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .stat-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .stat-label {
+        font-size: 12px;
+        color: #c89245;
+      }
+      .stat-value {
+        font-size: 16px;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+      }
+      .stat-gold { color: #f5c542; }
+      .stat-green { color: #2ecc71; }
+      .stat-cream { color: #f6e8da; }
+
+      /* Proportional chunky 3D buttons (not squeezed) */
+      .modal-btn-primary {
+        width: 216px;
+        height: 64px;
+        font-size: 18px;
+        margin-top: 4px;
+      }
+      .modal-btn-secondary {
+        width: 155px;
+        height: 44px;
+        font-size: 14px;
+      }
+
+      .claim-receipt {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        padding: 12px;
+        background: rgba(46, 204, 113, 0.1);
+        border: 1px solid rgba(46, 204, 113, 0.3);
+        border-radius: 12px;
+        width: 100%;
+        animation: receipt-in 0.5s ease-out;
+      }
+      .receipt-icon {
+        width: 36px;
+        height: 36px;
+        object-fit: contain;
+      }
+      .receipt-icon.spinning {
+        animation: spin-in 0.8s ease-out;
+      }
+      @keyframes spin-in {
+        from { transform: rotate(-180deg) scale(0.3); opacity: 0; }
+        to { transform: rotate(0deg) scale(1); opacity: 1; }
+      }
+      @keyframes receipt-in {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .receipt-amount {
+        font-family: 'Kavoon', sans-serif;
+        font-size: 20px;
+        color: #f5c542;
+        text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+      }
+      .receipt-alloc {
+        font-size: 12px;
+        color: #2ecc71;
+      }
+
+      /* ========= Tutorial Card ========= */
+      .tutorial-card {
+        text-align: center;
+      }
+      .tutorial-icon-wrap {
+        width: 68px;
+        height: 68px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 4px auto;
+        background: rgba(42, 26, 14, 0.7);
+        border: 2px solid #c89245;
+        border-radius: 50%;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      }
+      .tutorial-img-icon {
+        width: 44px;
+        height: 44px;
+        object-fit: contain;
+      }
+      .tutorial-body {
+        font-size: 13px;
+        color: #f6e8da;
+        line-height: 1.45;
+        opacity: 0.85;
+      }
+      .tutorial-dots {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: rgba(200, 146, 69, 0.3);
+      }
+      .dot.active {
+        background: #f5c542;
+      }
+
+      /* ========= Leaderboard ========= */
+      .lb-card {
+        max-height: 400px;
+      }
+      .lb-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: 'Kavoon', sans-serif;
+        font-size: 12px;
+      }
+      .lb-table thead th {
+        font-size: 10px;
+        color: #c89245;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        padding: 4px 6px;
+        border-bottom: 1px solid rgba(200, 146, 69, 0.25);
+        text-align: left;
+      }
+      .lb-row td {
+        padding: 5px 6px;
+        border-bottom: 1px solid rgba(200, 146, 69, 0.1);
+      }
+      .lb-self td {
+        color: #f5c542;
+        font-weight: bold;
+      }
+      .lb-rank { width: 28px; text-align: center; }
+      .lb-name { color: #f6e8da; }
+      .lb-score { color: #f5c542; text-align: right; }
+      .lb-alloc { color: #2ecc71; text-align: right; }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="game-wrapper">
+        <!-- Phaser Canvas -->
+        <div id="game-container"></div>
+
+        <!-- Flaunch UI Overlay (DOM layer on top of canvas) -->
+        <div id="flaunch-ui-overlay">
+          <!-- Sound Toggle Button (Top-Right, In-Game Only) -->
+          <button id="sound-toggle-btn" class="interactive" aria-label="Toggle Sound" style="display: none;">
+            <img id="sound-icon-img" src="./assets/images/sound-on.svg" alt="Sound" />
+          </button>
+
+          <!-- Round Timer Badge (Top-Left Stopwatch) -->
+          <div id="round-timer" data-gm-timer="true" style="display: none;">⏱ 03:00</div>
+
+          <!-- Practice Indicator (Bottom-Left, Opposite to HP) -->
+          <div id="practice-indicator" data-gm-practice="true" style="display: none;">⚠️ PRACTICE (30s)</div>
+
+          <!-- iOS-Style Game HUD (Below Timer: Level badge + Progress Bar + Score badge) -->
+          <div id="dom-hud" style="display: none;">
+            <div id="hud-level-badge" class="hud-badge">
+              <span id="hud-level-label">LEVEL 1</span>
+            </div>
+            <div id="hud-progress-bar">
+              <div id="hud-progress-fill"></div>
+            </div>
+            <div id="hud-score-badge" class="hud-badge">
+              <span id="hud-score-label">0</span>
+            </div>
+          </div>
+
+          <!-- HP Container (Bottom-Right, Above CoinPanel) -->
+          <div id="hud-hp-container"></div>
+
+          <!-- Disco / Slow / Fast Mode Banners -->
+          <div id="disco-banner" style="display: none;">DISCO 2X</div>
+          <div id="slow-banner" style="display: none;">SLOW MODE</div>
+          <div id="fast-banner" style="display: none;">⚡ FAST 1.5X</div>
+
+          <!-- Allocation Beat Toasts -->
+          <div id="allocation-toast-container"></div>
+
+          <!-- Menu Overlay (Lobby) -->
+          <div id="menu-dom-overlay" class="interactive" style="display: flex;">
+            <img id="menu-logo" src="./assets/images/logo.png" alt="Coffee Crawl" />
+            <div id="menu-subtitle">BEAN RUNNER - Mini</div>
+            <img id="menu-cup-anim" src="./assets/images/cl-anim-low.gif" alt="Coffee Cup" />
+            <div id="menu-best-score">🏆 BEST: 0 pts</div>
+            <button id="menu-start-btn" class="p-btn-green interactive">START RUN</button>
+            <div class="menu-btn-row">
+              <button id="menu-tutorial-btn" class="p-btn-brown interactive">HOW TO PLAY</button>
+              <button id="menu-ranks-btn" class="p-btn-brown interactive">RANKS</button>
+            </div>
+            <div id="menu-footer">v1.0.0 • Flaunch Game Mode</div>
+          </div>
+
+          <!-- Tutorial Modal -->
+          <div id="tutorial-modal" class="modal-overlay"></div>
+
+          <!-- Game Over Modal -->
+          <div id="gameover-modal" class="modal-overlay"></div>
+
+          <!-- End Screen Modal -->
+          <div id="endscreen-modal" class="modal-overlay"></div>
+
+          <!-- Leaderboard Modal -->
+          <div id="leaderboard-modal" class="modal-overlay"></div>
+
+          <!-- Flaunch Coin Panel ($BEAN) -->
+          <div id="flaunch-coin-panel" data-gm-coin-panel="true" style="display: none;">
+            <div class="coin-panel-left">
+              <img src="./assets/images/honey-bean.png" class="coin-panel-icon" alt="$BEAN" />
+              <div>
+                <span class="coin-panel-ticker">$BEAN</span>
+                <span class="coin-panel-price">$0.0425</span>
+                <span class="coin-panel-change">+18.4%</span>
+              </div>
+            </div>
+            <div class="coin-panel-center">
+              <div class="coin-panel-alloc-label">ALLOCATION</div>
+              <div id="coin-panel-allocation">$0.00</div>
+            </div>
+            <button id="coin-panel-buy-btn" class="p-btn-green interactive">BUY $BEAN</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>
