@@ -1,12 +1,12 @@
-# ☕ Coffee Crawl Mini — Flaunch Game Mode
+# Coffee Crawl Mini — Flaunch Game Mode
 
-Official Web / Flaunch Game Mode port of **Coffee Crawl: Bean Runner**.
+Official Web and Flaunch Game Mode port of the original **Coffee Crawl: Bean Runner** iOS game.
 
 Built with **Phaser 3**, **TypeScript**, **Vite**, and **Web Audio API** procedural audio synthesis.
 
 ---
 
-## 🎮 Game Overview
+## Game Overview
 - **Runner Mechanics:** 3-lane dodge & collect endless runner with progressive lane speeds, smooth physics, and dynamic obstacles.
 - **Collectibles:**
   - Standard Coffee Beans (+1 pt)
@@ -22,7 +22,7 @@ Built with **Phaser 3**, **TypeScript**, **Vite**, and **Web Audio API** procedu
 
 ---
 
-## 🚀 Development & Build
+## Development & Build
 
 ### Install dependencies
 ```bash
@@ -48,7 +48,7 @@ The production output will be generated in `./dist` as a self-contained bundle u
 
 ---
 
-## 📄 Provenance & Contracts
-- **Upstream Repository:** [https://github.com/ufhouck/coffeecrawl](https://github.com/ufhouck/coffeecrawl)
+## Provenance & Specifications
+- **Origin:** Ported and adapted from the original **Coffee Crawl** iOS game.
 - **Flaunch Contract:** [`port.json`](./port.json)
 - **Flaunch Agent Guidelines:** [`AGENTS.md`](./AGENTS.md)
