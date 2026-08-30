@@ -2,7 +2,7 @@ import type { EconomyState } from '../game/types.ts';
 import { roomInstance } from '../room.ts';
 
 /**
- * Game Over & End Screen DOM Modals — Warm coffee palette, receipt card, $BEAN naming.
+ * Game Over & End Screen DOM Modals — Warm coffee palette, receipt card, dynamic token naming.
  */
 export class GameOverModalUI {
   private overlayEl: HTMLElement | null;
@@ -79,7 +79,9 @@ export class EndScreenModalUI {
     const playerEntry = lb.find(e => e.isSelf);
     const rank = playerEntry?.rank ?? '-';
     const totalPlayers = lb.length;
-    const beanAmount = (finalState.allocation / 0.0425).toFixed(1);
+    const ticker = roomInstance.getTicker();
+    const price = roomInstance.getMarketData().price;
+    const tokenAmount = price > 0 ? (finalState.allocation / price).toFixed(1) : '—';
 
     this.overlayEl.innerHTML = `
       <div class="modal-card">
@@ -98,7 +100,7 @@ export class EndScreenModalUI {
             <span class="stat-value stat-cream">#${rank} of ${totalPlayers}</span>
           </div>
         </div>
-        <button class="p-btn-green modal-btn-primary" id="endscreen-claim">CLAIM & BUY $BEAN</button>
+        <button class="p-btn-green modal-btn-primary" id="endscreen-claim">CLAIM & BUY ${ticker}</button>
         <button class="p-btn-brown modal-btn-secondary" id="endscreen-lobby">LOBBY</button>
       </div>
     `;
@@ -116,7 +118,7 @@ export class EndScreenModalUI {
         receipt.className = 'claim-receipt';
         receipt.innerHTML = `
           <img src="./assets/images/honey-bean.png" class="receipt-icon spinning" />
-          <div class="receipt-amount">${beanAmount} $BEAN</div>
+          <div class="receipt-amount">${tokenAmount} ${ticker}</div>
           <div class="receipt-alloc">$${finalState.allocation.toFixed(2)} Allocation Earned</div>
         `;
 
@@ -170,7 +172,7 @@ export class TutorialModalUI {
     const cards = [
       { title: 'SWIPE TO MOVE', body: 'Tap left/right or use A/D keys to switch between 3 lanes.', icon: './assets/images/logo-cup.png' },
       { title: 'COLLECT BEANS', body: 'Grab coffee beans, sugar, gold beans, and croissants for points! Avoid spills and broken cups.', icon: './assets/images/cekirdek-normal.png' },
-      { title: 'EARN $BEAN', body: 'Score points to earn allocation. Claim your $BEAN tokens after each round!', icon: './assets/images/honey-bean.png' }
+      { title: 'EARN TOKENS', body: 'Score points to earn allocation. Claim your token allocation after each round!', icon: './assets/images/honey-bean.png' }
     ];
 
     let current = 0;

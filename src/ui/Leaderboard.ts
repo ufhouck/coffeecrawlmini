@@ -1,4 +1,5 @@
 import type { LeaderboardEntry } from '../game/types.ts';
+import { roomInstance } from '../room.ts';
 
 export class LeaderboardModalUI {
   private overlayEl: HTMLElement | null;
@@ -32,7 +33,7 @@ export class LeaderboardModalUI {
               <th></th>
               <th>Barista</th>
               <th>Score</th>
-              <th>$BEAN</th>
+              <th>${roomInstance.getTicker()}</th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>

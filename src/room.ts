@@ -20,12 +20,12 @@ export class GameRoom {
   public isRoundEnded = false;
 
   private marketData: MarketData = {
-    ticker: '$BEAN',
-    name: 'Coffee Crawl Bean',
-    price: 0.0425,
-    change24h: 18.4,
-    marketCap: '$425,000',
-    history: [0.031, 0.033, 0.032, 0.036, 0.035, 0.039, 0.041, 0.0425]
+    ticker: '$COIN',
+    name: 'Flaunch Coin',
+    price: 0,
+    change24h: 0,
+    marketCap: '--',
+    history: []
   };
 
   private mockRivals: LeaderboardEntry[] = [
@@ -151,6 +151,10 @@ export class GameRoom {
 
   public getMarketData(): MarketData {
     return this.marketData;
+  }
+
+  public getTicker(): string {
+    return this.marketData.ticker;
   }
 
   public getLeaderboard(): LeaderboardEntry[] {

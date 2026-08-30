@@ -800,21 +800,21 @@
           <!-- Leaderboard Modal -->
           <div id="leaderboard-modal" class="modal-overlay"></div>
 
-          <!-- Flaunch Coin Panel ($BEAN) -->
+          <!-- Flaunch Coin Panel (Dynamic — populated by CoinPanel.ts) -->
           <div id="flaunch-coin-panel" data-gm-coin-panel="true" style="display: none;">
             <div class="coin-panel-left">
-              <img src="./assets/images/honey-bean.png" class="coin-panel-icon" alt="$BEAN" />
+              <img src="./assets/images/honey-bean.png" class="coin-panel-icon" alt="Token" />
               <div>
-                <span class="coin-panel-ticker">$BEAN</span>
-                <span class="coin-panel-price">$0.0425</span>
-                <span class="coin-panel-change">+18.4%</span>
+                <span class="coin-panel-ticker" id="coin-panel-ticker">$COIN</span>
+                <span class="coin-panel-price" id="coin-panel-price">--</span>
+                <span class="coin-panel-change" id="coin-panel-change"></span>
               </div>
             </div>
             <div class="coin-panel-center">
               <div class="coin-panel-alloc-label">ALLOCATION</div>
               <div id="coin-panel-allocation">$0.00</div>
             </div>
-            <button id="coin-panel-buy-btn" class="p-btn-green interactive">BUY $BEAN</button>
+            <button id="coin-panel-buy-btn" class="p-btn-green interactive" data-gm-buy="true">BUY</button>
           </div>
         </div>
       </div>

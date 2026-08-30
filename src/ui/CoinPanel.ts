@@ -3,7 +3,7 @@ import { audioManager } from '../systems/AudioManager.ts';
 
 /**
  * CoinPanel — Flaunch-required `data-gm-coin-panel` bar.
- * Connects Flaunch BUY token contract and provides rich in-game feedback.
+ * All token references are dynamic via room.getTicker().
  */
 export class CoinPanelUI {
   private panelEl: HTMLElement | null;
@@ -11,6 +11,33 @@ export class CoinPanelUI {
   constructor() {
     this.panelEl = document.getElementById('flaunch-coin-panel');
     this.setupBuyButton();
+    this.syncTicker();
+  }
+
+  /** Populate ticker, price, change from room market data */
+  public syncTicker() {
+    const market = roomInstance.getMarketData();
+    const ticker = market.ticker;
+
+    const tickerEl = document.getElementById('coin-panel-ticker');
+    if (tickerEl) tickerEl.innerText = ticker;
+
+    const priceEl = document.getElementById('coin-panel-price');
+    if (priceEl) priceEl.innerText = market.price > 0 ? `$${market.price.toFixed(4)}` : '--';
+
+    const changeEl = document.getElementById('coin-panel-change');
+    if (changeEl) {
+      if (market.change24h !== 0) {
+        const sign = market.change24h > 0 ? '+' : '';
+        changeEl.innerText = `${sign}${market.change24h.toFixed(1)}%`;
+        changeEl.style.color = market.change24h >= 0 ? '#2ecc71' : '#ff6b6b';
+      } else {
+        changeEl.innerText = '';
+      }
+    }
+
+    const buyBtn = document.getElementById('coin-panel-buy-btn');
+    if (buyBtn) buyBtn.innerText = `BUY ${ticker}`;
   }
 
   public updateAllocation(allocation: number) {
@@ -61,6 +88,7 @@ export class CoinPanelUI {
         e.preventDefault();
         e.stopPropagation();
 
+        const ticker = roomInstance.getTicker();
         const alloc = roomInstance.getState().allocation;
         if (alloc > 0) {
           audioManager.playCollect(true);
@@ -72,11 +100,11 @@ export class CoinPanelUI {
               type: 'FLAUNCH_BUY',
               action: 'buy_allocation',
               amount: alloc,
-              ticker: '$BEAN'
+              ticker
             }, '*');
           }
 
-          this.showToast(`Claimed $${alloc.toFixed(2)} $BEAN Allocation!`, true);
+          this.showToast(`Claimed $${alloc.toFixed(2)} ${ticker} Allocation!`, true);
           if (onBuy) onBuy();
         } else {
           audioManager.playHit();
